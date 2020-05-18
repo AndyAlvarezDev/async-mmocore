@@ -1,0 +1,86 @@
+import java.text.SimpleDateFormat
+
+plugins {
+    id 'java-library'
+    id 'idea'
+    id 'eclipse'
+    id 'net.nemerosa.versioning' version '2.8.2'
+    id 'jacoco'
+}
+
+group = 'io.github.andyalvarezdev'
+version = '3.0.1'
+
+sourceCompatibility = JavaVersion.VERSION_11
+
+ext.moduleName = 'io.github.andyalvarezdev.mmocore'
+ext.revision = versioning.info.build
+ext.buildJDK = "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})".toString()
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/io.github.andyalvarezdev.mmocore']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api 'org.slf4j:slf4j-api:2.0.0-alpha1'
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.awaitility:awaitility:3.1.5'
+}
+
+afterEvaluate {
+    compileJava {
+        inputs.property("moduleName", moduleName)
+        doFirst {
+            options.compilerArgs = ['--module-path', classpath.asPath ]
+            options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+            classpath = files()
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes('Built-By'       : System.getProperty('user.name'),
+                   'Build-Timestamp': new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+                   'Build-Revision' : revision,
+                   'Build-Version'  : version,
+                   'Build-Jdk'      : buildJDK,
+                   'Automatic-Module-Name': moduleName)
+    }
+}
+
+task jarSources(type:Jar){
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+javadoc {
+    exclude 'module-info.java'
+}
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+}
+
+plugins.withType(JacocoPlugin) {
+    tasks["test"].finalizedBy 'jacocoTestReport'
+}
